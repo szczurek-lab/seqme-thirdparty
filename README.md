@@ -14,7 +14,7 @@ An external model is compatible with seqme if it satisfies the following three r
 - Repository dependencies are installable using `pip install .`, e.g., by setup.py or pyproject.toml.
 - Has a function with signature `Callable[[list[str], ...], np.ndarray]` where the first parameter is called `sequences`.
 
-Only braches in this repository satisfy these three requirements. To use the toy model in this branch, we define the function entry point, repository url and model directory.
+All branches in this repository satisfy these three requirements. To use the toy model in this branch, we define the function entry point, repository url and model directory.
 
 ```python
 from seqme.models import ThirdPartyModel
