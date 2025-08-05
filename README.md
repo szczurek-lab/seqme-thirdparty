@@ -1,30 +1,237 @@
 # seqme-thirdparty
 
-Some models are not available through e.g., PyPI or Huggingface - only the git repository may be available. Other models licenses may not be compatible with seqme's license. Hence, why these models are not directly in the seqme package. Here we provide a repository for setting up such a third-party model.
+### Installation
 
-## Ported models
+Create a new virtual enviroment, e.g., `conda` environment:
 
-This repository has several branches. Each branch is a model ported to be compatible with seqme's third-party interface.
+```
+conda create -n ampeppy_env python=3.8
+```
 
-## Getting started
-
-An external model is compatible with seqme if it satisfies the following three requirements:
-
-- Repository is accessible using `git clone`, e.g. a public repository or already on your local machine.
-- Repository dependencies are installable using `pip install .`, e.g., by setup.py or pyproject.toml.
-- Has a function with signature `Callable[[list[str], ...], np.ndarray]` where the first parameter is called `sequences`.
-
-All branches in this repository satisfy these three requirements. To use the toy model in this branch, we define the function entry point, repository url and model directory.
+Define the entry-point.
 
 ```python
 from seqme.models import ThirdPartyModel
 
 model = ThirdPartyModel(
-    entry_point="seqmetp.model:embed",
-    repo_path="./plugins/thirdparty/main",
+    entry_point="amPEPpy.predict:predict",
+    repo_path="./plugins/thirdparty/ampeppy",
     repo_url="https://github.com/szczurek-lab/seqme-thirdparty",
-    branch="main",
+    branch="ampeppy",
+    python_bin="/opt/anaconda3/envs/ampeppy_env/bin/python",
 )
 
 model(sequences=["SEQVENCE"])
 ```
+
+**Important**: The remaining part of the README is there for historical reasons, but any setup steps should be disregarded.
+
+# amPEPpy: An antimicrobial peptide prediction tool
+
+## About
+
+amPEPpy is a Python 3 application that implements a random forest classifier for predicting antimicrobial peptide sequences using the Distribution descriptor set from the [Global Protein Sequence Descriptors](https://dx.doi.org/10.1073%2Fpnas.92.19.8700). amPEPpy has improved portability, increased accuracy relative to similar methods, and includes utilities for easily training and optimizing random forest classifiers on novel training data.
+
+## Table of Contents
+
+- [Install](#install)
+- [Quickstart tutorial](#quickstart-tutorial)
+  - [Training random forest classifier](#training-random-forest-classifier)
+  - [Classifying sequences using the trained classifier](#classifying-sequences-using-the-trained-classifier)
+- [Optimizing the random forest classifier, calculating feature importance, and feature selection](#optimizing-the-random-forest-classifier-calculating-feature-importance-and-feature-selection)
+  - [Optimizing the number of decision trees within the random forest classifier](#optimizing-the-number-of-decision-trees-within-the-random-forest-classifier)
+  - [Feature importance](#feature-importance)
+  - [Excluding features from training and classifiying](#excluding-features-from-training-and-classifiying)
+- [Citing](#citing)
+- [Appendix](#appendix)
+  - [Global options](#global-options)
+  - [Train](#train)
+  - [Predict](#predict)
+
+## Install
+
+1. Download amPEPpy and training data using the below bash command or the zip link:
+
+```bash
+git clone https://github.com/tlawrence3/amPEPpy.git
+```
+
+2. Change into the `amPEPpy` directory
+
+```bash
+cd amPEPpy
+```
+
+3. We recommend using [anaconda](https://www.anaconda.com/products/individual) and conda enviroments for installing and using amPEPpy. For MacOSX and Linux users we recommend installing the command line tools for anaconda. Windows users don't have this option and will need to open a powershell from the anaconda GUI to install and use `amPEPpy`. The following commands will create a conda environment with all the required packages and activate it.
+
+```bash
+conda create -n amPEP python=3.8 pandas numpy biopython scikit-learn
+conda activate amPEP
+```
+
+If anaconda is unavailable for your system or you don't want to install it you can still install amPEPpy using pip with the command below:
+
+```bash
+pip install .
+```
+
+4. Now we can install amPEPpy and test the installation with the below commands:
+
+```bash
+python setup.py install
+ampep -h
+```
+
+## Quickstart tutorial
+
+Here are minimal steps required to get `amPEPpy` up and running to classify protein sequences as AMP or nonAMP
+
+### Training random forest classifier
+
+Now that amPEPpy is installed we need to train the machine-learning algorithm. To do this we need a positive dataset (AMP sequences) and a negative dataset (nonAMP) sequences in fasta format. These are located in the `training_data` folder.
+
+To train the random forest classifier with the same settings as the manuscript use the below command.
+
+```bash
+ampep train -p training_data/M_model_train_AMP_sequence.numbered.fasta -n training_data/M_model_train_nonAMP_sequence.numbered.proplen.subsample.fasta --seed 2012
+```
+
+This should create a file named `amPEP.model` which contains the saved random forest classifier. The `-p` flag is the path to your fasta file containing AMP sequences, `-n` flag is the path to a fasta file containing nonAMP sequences, and `--seed` may be provided for reproducibility and was set to `2012` for all of the analyses for the manuscript. The model described in the manuscript is available in the `pretrained_models` directory.
+
+### Classifying sequences using the trained classifier
+
+Use the below command to classify amino acid sequences in fasta format using the trained random forest. As an example we will use our positive training data.
+
+```bash
+ampep predict -m amPEP.model -i training_data/M_model_train_AMP_sequence.numbered.fasta -o results.tsv --seed 2012
+```
+
+This should result in a file named `results.tsv` that contains the classification results for the positive dataset. The `-m` flag is the path to the model file created during training, `-i` flag is the path to a fasta file containing amino acid sequences to classifier, and the `-o` flag.
+
+## Tutorial for optimizing the random forest classifier on novel training data
+
+After finishing the quickstart tutorial the steps belows will take you through the steps we used to optimize our random forest classifier. These steps can be used to optimize a new classifier on novel training data. In the example below we will use the training data from our publication, however, if you are interested in training on a larger dataset see the [ADAPTABLE](http://gec.u-picardie.fr/adaptable/cgi-bin/index-browse.sh) database.
+
+### Optimizing the number of decision trees within the random forest classifier
+
+First we need to determine the number of decision trees produces the lowest [out-of-bag error](https://towardsdatascience.com/what-is-out-of-bag-oob-score-in-random-forest-a7fa23d710). The below command will calculate out-of-bag error for random forest classifiers containing between 23 and 175 decision trees saving the results to `oob_error_results.tsv`.
+
+```bash
+ampep train --test-trees --min-trees 23 --max-trees 175 \
+-p training_data/M_model_train_AMP_sequence.numbered.fasta \
+-n training_data/M_model_train_nonAMP_sequence.numbered.proplen.subsample.fasta \
+--seed 2012 > oob_error_results.tsv
+```
+
+After running this command you should have file in the current directory named `oob_error_results.tsv`. This file contains tab-separated values for each random forest classifier's out-of-bag error. We recommend selecting the smallest number of estimators that results in the lowest out-of-bag error. Below is an example of the `oob_error_results.tsv` file:
+
+```
+n_estimators    oob_error
+23      0.19033047735618114
+24      0.1900244798041616
+25      0.19033047735618114
+26      0.18925948592411257
+27      0.18665850673194617
+```
+
+### Calculating feature importance
+
+We calculate a feature's importance by change in out-of-bag accuracy between a random forest classifier trained with all features and one trained with the feature removed. A positive value indicates that the classifier performs better when the feature is included and a negative value indicates the classifer performs better when the feature is removed. The below command will calculate the importance of each feature and write the results to `feature.importances.dropcol.oob.csv`.
+
+```bash
+ampep train --feature-importance --num-trees \
+-p training_data/M_model_train_AMP_sequence.numbered.fasta \
+-n training_data/M_model_train_nonAMP_sequence.numbered.proplen.subsample.fasta \
+--seed 2012
+```
+
+Below is an example of the results contained in `feature.importances.dropcol.oob.csv` after running the above command:
+
+```
+Feature,Importance
+normalized.van.der.waals.2.25,0.008720930232558155
+polarity.2.50,0.008108935128518957
+hydrophobicity.1.100,0.00795593635250913
+polarizability.1.25,0.0
+polarizability.1.0,-0.0009179926560587415
+```
+
+The result file contains two columns `Feature` which is the name of the feature from the Distribution descriptor set from the [Global Protein Sequence Descriptors](https://dx.doi.org/10.1073%2Fpnas.92.19.8700) and the second column is the difference in the out-of-bag accuracy between a random forest classifier trained with all features and one trained with this feature removed.
+
+### Excluding features from training and classifying
+
+Based on the feature importance analysis above it appears that removing the `polarizability.1.0` feature actually improved the performance of the random forest classifier. If we want to remove this featue from training and classifying we can do this using the `--drop-features` option. This option is expecting a text file with one feature per line that will be removed during training and classification. Below is an example of the file required by the `--drop-features` option that will remove two features:
+
+```
+polarizability.1.25
+polarizability.1.0
+```
+
+If the above example file was named `features.remove.txt` here is the command that will train the random forest classifier removing these features:
+
+```bash
+ampep train -p training_data/M_model_train_AMP_sequence.numbered.fasta \
+-n training_data/M_model_train_nonAMP_sequence.numbered.proplen.subsample.fasta \
+--drop-features features.remove.txt --seed 2012
+```
+
+Once the model is trained with these features removed and we want to use it to classify sequences we need to provide the `predict` command with the `-drop-features` option. Below is an example command for predicting AMP sequences with the above features removed.
+
+```bash
+ampep predict -m amPEP.model -i training_data/M_model_train_AMP_sequence.numbered.fasta --drop-features features.remove.txt -o results.tsv --seed 2012
+```
+
+## Citing
+
+## Appendix
+
+### Global options
+
+`-v --version`
+Show program's version number and exit
+
+`-h --help`
+Print help message and exit
+
+`--seed`
+Seed for random processes. This allows reproducibility of random forest training. Default is a random seed number.
+
+`-t --num-processes`
+Number of processor cores to use for training and classification. Default is the number of system cores reported by the OS
+
+`-d --drop-features`
+Text file containing list of features to drop during random forest training and classification. File must have one feature per line
+
+### Train
+
+`-p --positive`
+Fasta file containing amino acid sequences of known antimicrobial peptides.
+
+`-n --negative`
+Fasta file containing amino acid sequences of non-antimicrobial peptides.
+
+`--test-trees`
+Test accuracy of random forest classifier using different numbers of classifiers evaluted using out of bag error. `--min-trees` and `--max-trees` control the range of classifiers tested. Results are printed to stdout.
+
+`--min-trees`
+Minimum number of classifiers within random forest classifier when evaluating out of bag error. Default is 23.
+
+`--max-trees`
+Minimum number of classifiers within random forest classifier when evaluating out of bag error. Default is 175.
+
+`--num-trees`
+Number of classifers used to train random forest classifier. Default is 160 which was shown to produce the lowest out of bag error on training data.
+
+`--feature-importance`
+Test feature importance using the drop feature method. Results are written to a csv file in the current directory.
+
+### Predict
+
+`-i --input-sequences`
+Fasta file containing amino acid sequences to be classified.
+
+`-o --output-file`
+Output file to save classification results. Default is stdout.
+
+`-m --model`
+Random forest model to use for classification. Random forest model is trained and outputted using the train module. Default is amPEP.model in the current directory.
