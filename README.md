@@ -19,6 +19,7 @@ Setup a project using:
 uv init --package hello-model
 ```
 
+Run the model:
 
 ```python
 import seqme as sm
