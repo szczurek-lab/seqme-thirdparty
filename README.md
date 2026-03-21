@@ -25,8 +25,8 @@ import seqme as sm
 
 model = sm.models.ThirdPartyModel(
     entry_point="hello_model.model:embed",
-    repo_path="./plugins/thirdparty/main",
-    repo_url="https://github.com/szczurek-lab/seqme-thirdparty",
+    path="../thirdparty/hello-model",
+    url="https://github.com/szczurek-lab/seqme-thirdparty",
     branch="main",
 )
 
