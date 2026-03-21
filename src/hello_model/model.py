@@ -16,4 +16,5 @@ def embed(sequences: list[str], batch_size: int = None) -> np.ndarray:
 
 
 if __name__ == "__main__":
-    embed(sequences=["ABC", "AAAA"])
+    vs = embed(sequences=["ABC", "AAAA"])
+    print(vs)

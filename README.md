@@ -4,23 +4,27 @@ Some models are not available through e.g., PyPI or Huggingface - only the git r
 
 ## Ported models
 
-This repository has several branches. Each branch is a model ported to be compatible with seqme's third-party interface.
+| Model | Repository | Description |
+|-------|------------|-------------|
+| AMPlify | [seqme-amplify](https://github.com/szczurek-lab/seqme-amplify) | Attentive deep learning model for antimicrobial peptide (AMP) prediction |
+| amPEPpy | [seqme-amPEPpy](https://github.com/szczurek-lab/seqme-amPEPpy) | Random forest classifier for antimicrobial peptide prediction using global protein sequence descriptors |
 
 ## Getting started
 
-An external model is compatible with seqme if it satisfies the following three requirements:
+An external model is compatible with seqme if it is setup using [uv](https://docs.astral.sh/uv/) (lockfile, python version defined), and defines an entry point (function).
 
-- Repository is accessible using `git clone`, e.g. a public repository or already on your local machine.
-- Repository dependencies are installable using `pip install .`, e.g., by setup.py or pyproject.toml.
-- Has a function with signature `Callable[[list[str], ...], np.ndarray]` where the first parameter is called `sequences`.
+Setup a project using:
 
-All branches in this repository satisfy these three requirements. To use the toy model in this branch, we define the function entry point, repository url and model directory.
+```bash
+uv init --package hello-model
+```
+
 
 ```python
-from seqme.models import ThirdPartyModel
+import seqme as sm
 
-model = ThirdPartyModel(
-    entry_point="seqmetp.model:embed",
+model = sm.models.ThirdPartyModel(
+    entry_point="hello_model.model:embed",
     repo_path="./plugins/thirdparty/main",
     repo_url="https://github.com/szczurek-lab/seqme-thirdparty",
     branch="main",
