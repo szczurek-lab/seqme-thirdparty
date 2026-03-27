@@ -13,7 +13,7 @@ Some models are not available through e.g., PyPI or Huggingface - only the git r
 ## Getting started
 
 An external model is compatible with seqme if it is setup using [uv](https://docs.astral.sh/uv/) (lockfile, python version defined), and defines an entry point (function).
-https://github.com/szczurek-lab/seqme-esmif1
+
 Setup a project using:
 
 ```bash
