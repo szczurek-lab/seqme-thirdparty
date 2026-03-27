@@ -8,6 +8,7 @@ Some models are not available through e.g., PyPI or Huggingface - only the git r
 |-------|------------|-------------|
 | AMPlify | [seqme-amplify](https://github.com/szczurek-lab/seqme-amplify) | Attentive deep learning model for antimicrobial peptide (AMP) prediction |
 | amPEPpy | [seqme-amPEPpy](https://github.com/szczurek-lab/seqme-amPEPpy) | Random forest classifier for antimicrobial peptide prediction using global protein sequence descriptors |
+| ESM-IF1 | [seqme-esmif1](https://github.com/RasmusML/seqme-esmif1) | Inverse folding model that generates amino acid sequences from fixed 3D protein backbones |
 
 ## Getting started
 
