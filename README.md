@@ -36,5 +36,7 @@ model = sm.models.ThirdPartyModel(
     branch="main",
 )
 
+model.help() # prints the function documentation for the model's entry point
+
 model(sequences=["SEQVENCE"])
 ```
